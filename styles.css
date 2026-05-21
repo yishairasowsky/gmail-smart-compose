@@ -1,0 +1,37 @@
+/* Gmail Smart Compose button styles */
+.gsc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 18px;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  color: #fff;
+  transition: opacity 0.2s;
+  margin-left: 6px;
+}
+
+.gsc-btn:hover {
+  opacity: 0.85;
+}
+
+.gsc-btn--autocorrect {
+  background-color: #1a73e8;
+}
+
+.gsc-btn--translate {
+  background-color: #34a853;
+}
+
+.gsc-btn .gsc-icon {
+  font-size: 15px;
+}
+
+.gsc-btn.gsc-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}

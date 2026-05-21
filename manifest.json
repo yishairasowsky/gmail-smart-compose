@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Gmail Smart Compose – Auto-correct & Translate",
+  "version": "1.0.0",
+  "description": "Adds Auto-correct and Translate buttons to Gmail's compose toolbar.",
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": ["https://mail.google.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icons/icon48.png"
+  }
+}
