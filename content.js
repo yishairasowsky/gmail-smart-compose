@@ -95,8 +95,8 @@ function setUserText(container, newText, userNodes) {
   sel.removeAllRanges();
   sel.addRange(range);
 
-  // Replace just the selected range
-  document.execCommand("insertText", false, newText);
+  // Replace just the selected range, preserving spacing before thread
+  document.execCommand("insertText", false, newText + "\n\n");
 
   // Place cursor at the end of the user's text (not the thread)
   const newSel = window.getSelection();
