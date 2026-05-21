@@ -59,11 +59,18 @@ async function callAI(systemPrompt, userText) {
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.action === "autocorrect") {
+    const threadHint = msg.threadContext
+      ? `\n\nHere is the prior conversation thread for tone context (DO NOT include any of this in your output):\n---\n${msg.threadContext}\n---`
+      : "";
     callAI(
-      "You are a proofreader. Fix all spelling and grammar mistakes in the following text. " +
-        "Return ONLY the corrected text, nothing else. Preserve the original language. " +
-        "If the text is already correct, return it unchanged.",
-      msg.text
+      "You are an expert email editor. Your job is to polish the user's draft email. " +
+        "Fix all spelling and grammar mistakes. " +
+        "Make the tone diplomatic, tactful, and professional. " +
+        "Mirror the tone and style of the conversation thread — if the thread is brief and direct, keep it brief and direct; if formal, stay formal. " +
+        "Preserve the original language (don't translate). " +
+        "Preserve the user's intent and key points exactly. " +
+        "Return ONLY the polished text, nothing else. No greetings or sign-offs unless the user included them.",
+      msg.text + threadHint
     )
       .then(sendResponse)
       .catch((e) => {

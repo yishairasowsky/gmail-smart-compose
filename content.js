@@ -1,7 +1,7 @@
 /**
  * Gmail Smart Compose – Content Script
  *
- * Injects Auto-correct and Translate buttons into Gmail compose windows.
+ * Injects Polish and Translate buttons into Gmail compose windows.
  * Uses the Send button as the single anchor point per compose window,
  * and marks the compose container to prevent duplicate injection.
  */
@@ -74,8 +74,21 @@ function getUserText(container) {
     userNodes.push(node);
   }
 
+  // Collect the rest as thread context
+  const threadParts = [];
+  let inThread = false;
+  for (const node of children) {
+    if (inThread) {
+      threadParts.push(node.textContent || "");
+    } else if (!userNodes.includes(node)) {
+      inThread = true;
+      threadParts.push(node.textContent || "");
+    }
+  }
+
   return {
     userText: userParts.join("\n").trim(),
+    threadContext: threadParts.join("\n").trim().slice(0, 2000),
     userNodes,
   };
 }
@@ -126,7 +139,7 @@ async function handleAutoCorrect(e) {
   const btn = e.currentTarget;
   const container = btn.closest(`[${MARKER}]`);
   if (!container) { showError(btn, "No container found"); return; }
-  const { userText, userNodes } = getUserText(container);
+  const { userText, threadContext, userNodes } = getUserText(container);
   if (!userText.trim()) { showError(btn, "No text found"); return; }
 
   btn.classList.add("gsc-loading");
@@ -135,6 +148,7 @@ async function handleAutoCorrect(e) {
     const corrected = await chrome.runtime.sendMessage({
       action: "autocorrect",
       text: userText,
+      threadContext: threadContext || "",
     });
     if (corrected && corrected !== userText) {
       setUserText(container, corrected, userNodes);
@@ -149,7 +163,7 @@ async function handleAutoCorrect(e) {
   } finally {
     btn.classList.remove("gsc-loading");
     setTimeout(() => {
-      btn.innerHTML = `<span class="gsc-icon">\u270D</span> Auto-correct`;
+      btn.innerHTML = `<span class="gsc-icon">\u270D</span> Polish`;
     }, 2000);
   }
 }
@@ -158,7 +172,7 @@ async function handleTranslate(e) {
   const btn = e.currentTarget;
   const container = btn.closest(`[${MARKER}]`);
   if (!container) { showError(btn, "No container found"); return; }
-  const { userText, userNodes } = getUserText(container);
+  const { userText, threadContext, userNodes } = getUserText(container);
   if (!userText.trim()) { showError(btn, "No text found"); return; }
 
   btn.classList.add("gsc-loading");
@@ -167,6 +181,7 @@ async function handleTranslate(e) {
     const translated = await chrome.runtime.sendMessage({
       action: "translate",
       text: userText,
+      threadContext: threadContext || "",
     });
     if (translated && translated !== userText) {
       setUserText(container, translated, userNodes);
@@ -199,7 +214,7 @@ function injectButtons(composeContainer, sendBtnRow) {
   wrapper.className = "gsc-button-wrapper";
 
   wrapper.appendChild(
-    createButton("Auto-correct", "gsc-btn--autocorrect", "\u270D", handleAutoCorrect)
+    createButton("Polish", "gsc-btn--polish", "\u270D", handleAutoCorrect)
   );
   wrapper.appendChild(
     createButton("Translate", "gsc-btn--translate", "\uD83C\uDF10", handleTranslate)
