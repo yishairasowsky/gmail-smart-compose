@@ -18,7 +18,12 @@ function createButton(label, className, icon, onClick) {
   btn.className = `gsc-btn ${className}`;
   btn.type = "button";
   btn.innerHTML = `<span class="gsc-icon">${icon}</span> ${label}`;
-  btn.addEventListener("click", onClick);
+  // Use mousedown — Gmail intercepts click events on injected elements
+  btn.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onClick(e);
+  }, true);
   return btn;
 }
 

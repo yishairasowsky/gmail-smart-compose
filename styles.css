@@ -1,4 +1,11 @@
 /* Gmail Smart Compose button styles */
+.gsc-button-wrapper {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  z-index: 999;
+}
+
 .gsc-btn {
   display: inline-flex;
   align-items: center;
@@ -13,6 +20,10 @@
   color: #fff;
   transition: opacity 0.2s;
   margin-left: 6px;
+  position: relative;
+  z-index: 999;
+  pointer-events: auto !important;
+  user-select: none;
 }
 
 .gsc-btn:hover {
