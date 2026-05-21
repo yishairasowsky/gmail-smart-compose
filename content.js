@@ -2,11 +2,12 @@
  * Gmail Smart Compose – Content Script
  *
  * Injects Auto-correct and Translate buttons into Gmail compose windows.
- * KEY FIX: uses a data-attribute guard so buttons are never injected twice,
- * even when Gmail's SPA navigation re-triggers the observer.
+ * Uses the Send button as the single anchor point per compose window,
+ * and marks the compose container to prevent duplicate injection.
  */
 
 const MARKER = "data-gsc-injected";
+let scanTimer = null;
 
 // ---------------------------------------------------------------------------
 // Button creation
@@ -25,24 +26,20 @@ function createButton(label, className, icon, onClick) {
 // Compose-body helpers
 // ---------------------------------------------------------------------------
 
-function getComposeBody(toolbar) {
-  // Walk up from the toolbar to find the editable compose div
-  const form = toolbar.closest("form") || toolbar.closest('[role="dialog"]');
-  if (!form) return null;
-  return form.querySelector('[role="textbox"][contenteditable="true"]')
-      || form.querySelector('div[aria-label][contenteditable="true"]');
+function getComposeBody(container) {
+  return container.querySelector('[role="textbox"][contenteditable="true"]')
+      || container.querySelector('div[aria-label][contenteditable="true"]');
 }
 
-function getComposeText(toolbar) {
-  const body = getComposeBody(toolbar);
+function getComposeText(container) {
+  const body = getComposeBody(container);
   return body ? body.innerText : "";
 }
 
-function setComposeText(toolbar, text) {
-  const body = getComposeBody(toolbar);
+function setComposeText(container, text) {
+  const body = getComposeBody(container);
   if (body) {
     body.focus();
-    // Use execCommand so Gmail registers the change in its internal state
     document.execCommand("selectAll", false, null);
     document.execCommand("insertText", false, text);
   }
@@ -54,8 +51,9 @@ function setComposeText(toolbar, text) {
 
 async function handleAutoCorrect(e) {
   const btn = e.currentTarget;
-  const toolbar = btn.closest("tr") || btn.parentElement;
-  const text = getComposeText(toolbar);
+  const container = btn.closest(`[${MARKER}]`);
+  if (!container) return;
+  const text = getComposeText(container);
   if (!text.trim()) return;
 
   btn.classList.add("gsc-loading");
@@ -65,7 +63,7 @@ async function handleAutoCorrect(e) {
       text,
     });
     if (corrected && corrected !== text) {
-      setComposeText(toolbar, corrected);
+      setComposeText(container, corrected);
     }
   } catch (err) {
     console.error("[GSC] Auto-correct error:", err);
@@ -76,8 +74,9 @@ async function handleAutoCorrect(e) {
 
 async function handleTranslate(e) {
   const btn = e.currentTarget;
-  const toolbar = btn.closest("tr") || btn.parentElement;
-  const text = getComposeText(toolbar);
+  const container = btn.closest(`[${MARKER}]`);
+  if (!container) return;
+  const text = getComposeText(container);
   if (!text.trim()) return;
 
   btn.classList.add("gsc-loading");
@@ -87,7 +86,7 @@ async function handleTranslate(e) {
       text,
     });
     if (translated && translated !== text) {
-      setComposeText(toolbar, translated);
+      setComposeText(container, translated);
     }
   } catch (err) {
     console.error("[GSC] Translate error:", err);
@@ -97,54 +96,71 @@ async function handleTranslate(e) {
 }
 
 // ---------------------------------------------------------------------------
-// Injection (with duplicate guard)
+// Injection – one set of buttons per compose window
 // ---------------------------------------------------------------------------
 
-function injectButtons(toolbar) {
-  // *** THIS IS THE FIX: skip if we already injected into this toolbar ***
-  if (toolbar.hasAttribute(MARKER)) return;
-  toolbar.setAttribute(MARKER, "true");
+function injectButtons(composeContainer, sendBtnRow) {
+  // Already injected into this compose window? Skip.
+  if (composeContainer.hasAttribute(MARKER)) return;
+  composeContainer.setAttribute(MARKER, "true");
 
-  const container =
-    toolbar.querySelector("td.btC") ||  // bottom toolbar cell
-    toolbar.querySelector("tr > td:last-child") ||
-    toolbar;
+  const wrapper = document.createElement("span");
+  wrapper.className = "gsc-button-wrapper";
 
-  const autocorrectBtn = createButton(
-    "Auto-correct", "gsc-btn--autocorrect", "\u270D", handleAutoCorrect
+  wrapper.appendChild(
+    createButton("Auto-correct", "gsc-btn--autocorrect", "\u270D", handleAutoCorrect)
   );
-  const translateBtn = createButton(
-    "Translate", "gsc-btn--translate", "\uD83C\uDF10", handleTranslate
+  wrapper.appendChild(
+    createButton("Translate", "gsc-btn--translate", "\uD83C\uDF10", handleTranslate)
   );
 
-  container.appendChild(autocorrectBtn);
-  container.appendChild(translateBtn);
+  // Insert buttons next to the Send button row
+  sendBtnRow.appendChild(wrapper);
 }
 
 // ---------------------------------------------------------------------------
-// Observer – watches for new compose windows
+// Scanner – finds compose windows via their Send button
 // ---------------------------------------------------------------------------
 
-function scanForToolbars() {
-  // Gmail compose bottom toolbar rows
-  const toolbars = document.querySelectorAll(
-    'tr.btC, div.btC, table.IZ td.gU, div[role="dialog"] .bAK'
+function scanForComposeWindows() {
+  // Find all Send buttons in Gmail
+  const sendButtons = document.querySelectorAll(
+    'div[role="button"][data-tooltip*="Send"], div[role="button"][aria-label*="Send"]'
   );
-  toolbars.forEach(injectButtons);
 
-  // Fallback: look for the Send button's toolbar row
-  const sendButtons = document.querySelectorAll('div[role="button"][data-tooltip*="Send"]');
-  sendButtons.forEach((btn) => {
-    const row = btn.closest("tr") || btn.closest("div.btC");
-    if (row) injectButtons(row);
+  sendButtons.forEach((sendBtn) => {
+    // Walk up to the compose container (dialog or form)
+    const composeContainer =
+      sendBtn.closest('[role="dialog"]') ||
+      sendBtn.closest("form") ||
+      sendBtn.closest(".M9");
+
+    if (!composeContainer) return;
+    if (composeContainer.hasAttribute(MARKER)) return;
+
+    // Find the row/cell the Send button lives in
+    const sendRow =
+      sendBtn.closest("tr") ||
+      sendBtn.closest("td") ||
+      sendBtn.parentElement;
+
+    if (sendRow) {
+      injectButtons(composeContainer, sendRow);
+    }
   });
 }
 
+// ---------------------------------------------------------------------------
+// Debounced MutationObserver
+// ---------------------------------------------------------------------------
+
 const observer = new MutationObserver(() => {
-  scanForToolbars();
+  // Debounce: wait for DOM to settle before scanning
+  if (scanTimer) clearTimeout(scanTimer);
+  scanTimer = setTimeout(scanForComposeWindows, 300);
 });
 
 observer.observe(document.body, { childList: true, subtree: true });
 
 // Initial scan
-scanForToolbars();
+scanForComposeWindows();
