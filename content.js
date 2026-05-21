@@ -97,6 +97,15 @@ function setUserText(container, newText, userNodes) {
 
   // Replace just the selected range
   document.execCommand("insertText", false, newText);
+
+  // Place cursor at the end of the user's text (not the thread)
+  const newSel = window.getSelection();
+  if (newSel.rangeCount > 0) {
+    const r = newSel.getRangeAt(0);
+    r.collapse(false);
+    newSel.removeAllRanges();
+    newSel.addRange(r);
+  }
 }
 
 // ---------------------------------------------------------------------------
