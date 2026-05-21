@@ -36,18 +36,67 @@ function getComposeBody(container) {
       || container.querySelector('div[aria-label][contenteditable="true"]');
 }
 
-function getComposeText(container) {
+/**
+ * Extracts only the user's own text from the compose body,
+ * stopping before any quoted/forwarded thread content.
+ * Returns { userText, userNodes } where userNodes are the DOM nodes
+ * containing the user's text (so we can replace just those).
+ */
+function getUserText(container) {
   const body = getComposeBody(container);
-  return body ? body.innerText : "";
+  if (!body) return { userText: "", userNodes: [] };
+
+  const children = Array.from(body.childNodes);
+  const userParts = [];
+  const userNodes = [];
+
+  for (const node of children) {
+    const text = node.textContent || "";
+    const tag = node.nodeName ? node.nodeName.toLowerCase() : "";
+
+    // Stop at Gmail's quoted-reply container
+    if (node.nodeType === 1) {
+      const el = /** @type {Element} */ (node);
+      // Gmail wraps quoted content in a div with class "gmail_quote"
+      if (el.classList && el.classList.contains("gmail_quote")) break;
+      // Also stop at forwarded message markers
+      if (el.querySelector && el.querySelector('.gmail_quote')) break;
+    }
+
+    // Stop at "---------- Forwarded message ---------" or "On ... wrote:"
+    if (/^-{5,}\s*(Forwarded message|הודעה שהועברה)/.test(text.trim())) break;
+    if (/^On .+ wrote:\s*$/.test(text.trim())) break;
+
+    // Stop at blockquote elements (another way Gmail shows quoted text)
+    if (tag === "blockquote") break;
+
+    userParts.push(text);
+    userNodes.push(node);
+  }
+
+  return {
+    userText: userParts.join("\n").trim(),
+    userNodes,
+  };
 }
 
-function setComposeText(container, text) {
+function setUserText(container, newText, userNodes) {
   const body = getComposeBody(container);
-  if (body) {
-    body.focus();
-    document.execCommand("selectAll", false, null);
-    document.execCommand("insertText", false, text);
-  }
+  if (!body || userNodes.length === 0) return;
+
+  body.focus();
+
+  // Select only the user's nodes (not the quoted thread)
+  const range = document.createRange();
+  range.setStartBefore(userNodes[0]);
+  range.setEndAfter(userNodes[userNodes.length - 1]);
+
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+
+  // Replace just the selected range
+  document.execCommand("insertText", false, newText);
 }
 
 // ---------------------------------------------------------------------------
@@ -58,17 +107,17 @@ async function handleAutoCorrect(e) {
   const btn = e.currentTarget;
   const container = btn.closest(`[${MARKER}]`);
   if (!container) return;
-  const text = getComposeText(container);
-  if (!text.trim()) return;
+  const { userText, userNodes } = getUserText(container);
+  if (!userText.trim()) return;
 
   btn.classList.add("gsc-loading");
   try {
     const corrected = await chrome.runtime.sendMessage({
       action: "autocorrect",
-      text,
+      text: userText,
     });
-    if (corrected && corrected !== text) {
-      setComposeText(container, corrected);
+    if (corrected && corrected !== userText) {
+      setUserText(container, corrected, userNodes);
     }
   } catch (err) {
     console.error("[GSC] Auto-correct error:", err);
@@ -81,17 +130,17 @@ async function handleTranslate(e) {
   const btn = e.currentTarget;
   const container = btn.closest(`[${MARKER}]`);
   if (!container) return;
-  const text = getComposeText(container);
-  if (!text.trim()) return;
+  const { userText, userNodes } = getUserText(container);
+  if (!userText.trim()) return;
 
   btn.classList.add("gsc-loading");
   try {
     const translated = await chrome.runtime.sendMessage({
       action: "translate",
-      text,
+      text: userText,
     });
-    if (translated && translated !== text) {
-      setComposeText(container, translated);
+    if (translated && translated !== userText) {
+      setUserText(container, translated, userNodes);
     }
   } catch (err) {
     console.error("[GSC] Translate error:", err);
