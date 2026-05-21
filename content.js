@@ -112,14 +112,25 @@ function setUserText(container, newText, userNodes) {
 // Core features
 // ---------------------------------------------------------------------------
 
+function showError(btn, msg) {
+  const origText = btn.innerHTML;
+  btn.innerHTML = `<span style="color:#fff">${msg}</span>`;
+  btn.style.backgroundColor = "#d93025";
+  setTimeout(() => {
+    btn.innerHTML = origText;
+    btn.style.backgroundColor = "";
+  }, 4000);
+}
+
 async function handleAutoCorrect(e) {
   const btn = e.currentTarget;
   const container = btn.closest(`[${MARKER}]`);
-  if (!container) return;
+  if (!container) { showError(btn, "No container found"); return; }
   const { userText, userNodes } = getUserText(container);
-  if (!userText.trim()) return;
+  if (!userText.trim()) { showError(btn, "No text found"); return; }
 
   btn.classList.add("gsc-loading");
+  btn.innerHTML = `<span class="gsc-icon">\u270D</span> Working...`;
   try {
     const corrected = await chrome.runtime.sendMessage({
       action: "autocorrect",
@@ -127,22 +138,31 @@ async function handleAutoCorrect(e) {
     });
     if (corrected && corrected !== userText) {
       setUserText(container, corrected, userNodes);
+      btn.innerHTML = `<span class="gsc-icon">\u270D</span> Done!`;
+    } else if (corrected) {
+      btn.innerHTML = `<span class="gsc-icon">\u270D</span> Already correct`;
+    } else {
+      showError(btn, "API error - check key");
     }
   } catch (err) {
-    console.error("[GSC] Auto-correct error:", err);
+    showError(btn, err.message.slice(0, 30));
   } finally {
     btn.classList.remove("gsc-loading");
+    setTimeout(() => {
+      btn.innerHTML = `<span class="gsc-icon">\u270D</span> Auto-correct`;
+    }, 2000);
   }
 }
 
 async function handleTranslate(e) {
   const btn = e.currentTarget;
   const container = btn.closest(`[${MARKER}]`);
-  if (!container) return;
+  if (!container) { showError(btn, "No container found"); return; }
   const { userText, userNodes } = getUserText(container);
-  if (!userText.trim()) return;
+  if (!userText.trim()) { showError(btn, "No text found"); return; }
 
   btn.classList.add("gsc-loading");
+  btn.innerHTML = `<span class="gsc-icon">\uD83C\uDF10</span> Working...`;
   try {
     const translated = await chrome.runtime.sendMessage({
       action: "translate",
@@ -150,11 +170,19 @@ async function handleTranslate(e) {
     });
     if (translated && translated !== userText) {
       setUserText(container, translated, userNodes);
+      btn.innerHTML = `<span class="gsc-icon">\uD83C\uDF10</span> Done!`;
+    } else if (translated) {
+      btn.innerHTML = `<span class="gsc-icon">\uD83C\uDF10</span> Same text`;
+    } else {
+      showError(btn, "API error - check key");
     }
   } catch (err) {
-    console.error("[GSC] Translate error:", err);
+    showError(btn, err.message.slice(0, 30));
   } finally {
     btn.classList.remove("gsc-loading");
+    setTimeout(() => {
+      btn.innerHTML = `<span class="gsc-icon">\uD83C\uDF10</span> Translate`;
+    }, 2000);
   }
 }
 
