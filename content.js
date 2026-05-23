@@ -145,21 +145,21 @@ async function handleAutoCorrect(e) {
   btn.classList.add("gsc-loading");
   btn.innerHTML = `<span class="gsc-icon">\u270D</span> Working...`;
   try {
-    const corrected = await chrome.runtime.sendMessage({
-      action: "autocorrect",
+    const resp = await chrome.runtime.sendMessage({
+      action: "polish",
       text: userText,
       threadContext: threadContext || "",
     });
-    if (corrected && corrected !== userText) {
-      setUserText(container, corrected, userNodes);
+    if (resp && resp.error) {
+      showError(btn, resp.error.slice(0, 40));
+    } else if (resp && resp !== userText) {
+      setUserText(container, resp, userNodes);
       btn.innerHTML = `<span class="gsc-icon">\u270D</span> Done!`;
-    } else if (corrected) {
-      btn.innerHTML = `<span class="gsc-icon">\u270D</span> Already correct`;
     } else {
-      showError(btn, "API error - check key");
+      btn.innerHTML = `<span class="gsc-icon">\u270D</span> Already great!`;
     }
   } catch (err) {
-    showError(btn, err.message.slice(0, 30));
+    showError(btn, err.message.slice(0, 40));
   } finally {
     btn.classList.remove("gsc-loading");
     setTimeout(() => {
@@ -178,18 +178,18 @@ async function handleTranslate(e) {
   btn.classList.add("gsc-loading");
   btn.innerHTML = `<span class="gsc-icon">\uD83C\uDF10</span> Working...`;
   try {
-    const translated = await chrome.runtime.sendMessage({
+    const resp = await chrome.runtime.sendMessage({
       action: "translate",
       text: userText,
       threadContext: threadContext || "",
     });
-    if (translated && translated !== userText) {
-      setUserText(container, translated, userNodes);
+    if (resp && resp.error) {
+      showError(btn, resp.error.slice(0, 40));
+    } else if (resp && resp !== userText) {
+      setUserText(container, resp, userNodes);
       btn.innerHTML = `<span class="gsc-icon">\uD83C\uDF10</span> Done!`;
-    } else if (translated) {
-      btn.innerHTML = `<span class="gsc-icon">\uD83C\uDF10</span> Same text`;
     } else {
-      showError(btn, "API error - check key");
+      btn.innerHTML = `<span class="gsc-icon">\uD83C\uDF10</span> Same text`;
     }
   } catch (err) {
     showError(btn, err.message.slice(0, 30));

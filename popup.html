@@ -4,16 +4,13 @@
   <meta charset="UTF-8" />
   <style>
     body {
-      width: 320px;
+      width: 300px;
       font-family: 'Segoe UI', Roboto, sans-serif;
       padding: 16px;
       margin: 0;
       color: #202124;
     }
-    h2 {
-      font-size: 16px;
-      margin: 0 0 12px;
-    }
+    h2 { font-size: 15px; margin: 0 0 12px; }
     label {
       display: block;
       font-size: 12px;
@@ -29,12 +26,9 @@
       font-size: 13px;
       box-sizing: border-box;
     }
-    input:focus, select:focus {
-      outline: none;
-      border-color: #1a73e8;
-    }
+    input:focus, select:focus { outline: none; border-color: #1a73e8; }
     button {
-      margin-top: 14px;
+      margin-top: 12px;
       width: 100%;
       padding: 8px;
       background: #1a73e8;
@@ -45,35 +39,92 @@
       cursor: pointer;
     }
     button:hover { background: #1765cc; }
-    .status {
-      margin-top: 8px;
-      font-size: 12px;
-      color: #34a853;
-      text-align: center;
+    button.secondary {
+      background: #fff;
+      color: #1a73e8;
+      border: 1px solid #dadce0;
+      margin-top: 6px;
     }
+    button.secondary:hover { background: #f8f9fa; }
+    .status { margin-top: 8px; font-size: 12px; text-align: center; }
+    .status.ok { color: #34a853; }
+    .status.err { color: #d93025; }
+    .usage-bar {
+      margin-top: 10px;
+      background: #e8f0fe;
+      border-radius: 4px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .usage-bar-fill {
+      height: 100%;
+      background: #1a73e8;
+      transition: width 0.3s;
+    }
+    .usage-label {
+      font-size: 11px;
+      color: #5f6368;
+      margin-top: 4px;
+    }
+    .plan-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 6px;
+    }
+    .plan-badge.free { background: #e8f0fe; color: #1a73e8; }
+    .plan-badge.paid { background: #e6f4ea; color: #34a853; }
+    #logged-in, #logged-out { display: none; }
+    hr { border: none; border-top: 1px solid #e0e0e0; margin: 12px 0; }
   </style>
 </head>
 <body>
-  <h2>Gmail Smart Compose Settings</h2>
 
-  <label for="apiKey">Anthropic API Key</label>
-  <input type="password" id="apiKey" placeholder="sk-ant-..." />
+  <!-- Logged out view -->
+  <div id="logged-out">
+    <h2>Gmail Smart Compose</h2>
+    <div id="auth-tabs" style="display:flex;gap:6px;margin-bottom:12px">
+      <button id="tab-login" class="secondary" style="margin-top:0;flex:1">Log in</button>
+      <button id="tab-register" class="secondary" style="margin-top:0;flex:1">Sign up</button>
+    </div>
+    <label for="email">Email</label>
+    <input type="email" id="email" placeholder="you@example.com" />
+    <label for="password">Password</label>
+    <input type="password" id="password" placeholder="••••••••" />
+    <button id="auth-btn">Log in</button>
+    <div class="status err" id="auth-error"></div>
+  </div>
 
-  <label for="targetLanguage">Translate to</label>
-  <select id="targetLanguage">
-    <option value="en">English</option>
-    <option value="he">Hebrew</option>
-    <option value="es">Spanish</option>
-    <option value="fr">French</option>
-    <option value="de">German</option>
-    <option value="ar">Arabic</option>
-    <option value="ru">Russian</option>
-    <option value="zh">Chinese</option>
-    <option value="ja">Japanese</option>
-  </select>
+  <!-- Logged in view -->
+  <div id="logged-in">
+    <h2>Gmail Smart Compose <span class="plan-badge" id="plan-badge"></span></h2>
 
-  <button id="save">Save</button>
-  <div class="status" id="status"></div>
+    <div id="usage-section"></div>
+
+    <hr />
+
+    <label for="targetLanguage">Translate to</label>
+    <select id="targetLanguage">
+      <option value="en">English</option>
+      <option value="he">Hebrew</option>
+      <option value="es">Spanish</option>
+      <option value="fr">French</option>
+      <option value="de">German</option>
+      <option value="ar">Arabic</option>
+      <option value="ru">Russian</option>
+      <option value="zh">Chinese</option>
+      <option value="ja">Japanese</option>
+    </select>
+    <button id="save-lang">Save language</button>
+
+    <button class="secondary" id="upgrade-btn" style="display:none">
+      Upgrade to Unlimited — $4.99/mo
+    </button>
+    <button class="secondary" id="logout-btn">Log out</button>
+    <div class="status" id="save-status"></div>
+  </div>
 
   <script src="popup.js"></script>
 </body>
