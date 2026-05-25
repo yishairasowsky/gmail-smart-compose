@@ -79,7 +79,14 @@ async function callClaude(systemPrompt, userContent) {
 // ---------------------------------------------------------------------------
 
 router.post("/polish", requireAuth, async (req, res) => {
-  const user = db.prepare("SELECT * FROM users WHERE id=?").get(req.user.userId);
+  let user = db.prepare("SELECT * FROM users WHERE id=?").get(req.user.userId);
+  if (!user && req.user.email) {
+    user = db.prepare("SELECT * FROM users WHERE email=?").get(req.user.email);
+    if (!user) {
+      const r = db.prepare("INSERT INTO users (email) VALUES (?)").run(req.user.email);
+      user = db.prepare("SELECT * FROM users WHERE id=?").get(r.lastInsertRowid);
+    }
+  }
   if (!user) return res.status(401).json({ error: "User not found" });
 
   if (user.plan === "free" && getUsage(user.id, "polish") >= FREE_LIMIT) {
@@ -119,7 +126,14 @@ router.post("/polish", requireAuth, async (req, res) => {
 });
 
 router.post("/translate", requireAuth, async (req, res) => {
-  const user = db.prepare("SELECT * FROM users WHERE id=?").get(req.user.userId);
+  let user = db.prepare("SELECT * FROM users WHERE id=?").get(req.user.userId);
+  if (!user && req.user.email) {
+    user = db.prepare("SELECT * FROM users WHERE email=?").get(req.user.email);
+    if (!user) {
+      const r = db.prepare("INSERT INTO users (email) VALUES (?)").run(req.user.email);
+      user = db.prepare("SELECT * FROM users WHERE id=?").get(r.lastInsertRowid);
+    }
+  }
   if (!user) return res.status(401).json({ error: "User not found" });
 
   if (user.plan === "free" && getUsage(user.id, "translate") >= FREE_LIMIT) {
@@ -149,7 +163,14 @@ router.post("/translate", requireAuth, async (req, res) => {
 });
 
 router.get("/usage", requireAuth, (req, res) => {
-  const user = db.prepare("SELECT * FROM users WHERE id=?").get(req.user.userId);
+  let user = db.prepare("SELECT * FROM users WHERE id=?").get(req.user.userId);
+  if (!user && req.user.email) {
+    user = db.prepare("SELECT * FROM users WHERE email=?").get(req.user.email);
+    if (!user) {
+      const r = db.prepare("INSERT INTO users (email) VALUES (?)").run(req.user.email);
+      user = db.prepare("SELECT * FROM users WHERE id=?").get(r.lastInsertRowid);
+    }
+  }
   if (!user) return res.status(401).json({ error: "User not found" });
 
   res.json({

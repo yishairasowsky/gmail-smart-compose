@@ -69,7 +69,7 @@ router.post("/google", async (req, res) => {
       db.prepare("UPDATE users SET google_id = ? WHERE id = ?").run(googleId, user.id);
     }
 
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "90d" });
+    const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: "90d" });
     res.json({ token, plan: user.plan });
   } catch (e) {
     res.status(500).json({ error: e.message });
