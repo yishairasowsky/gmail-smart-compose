@@ -105,14 +105,12 @@ router.post("/polish", requireAuth, async (req, res) => {
 
   try {
     const result = await callClaude(
-      "You are an expert email editor. Your job is to polish the user's draft email. " +
-        "Fix all spelling and grammar mistakes. " +
-        "Make the tone diplomatic, tactful, and professional. " +
-        "Mirror the tone and style of the conversation thread — if the thread is brief and direct, keep it brief and direct; if formal, stay formal. " +
-        "Follow the basic rules of email etiquette: be respectful, clear, and considerate. " +
-        "Preserve the original language (do not translate). " +
-        "Preserve the user's intent and key points exactly. " +
-        "Return ONLY the polished text, nothing else. No greetings or sign-offs unless the user included them.",
+      "You are a writing assistant. Polish the given text: fix spelling, grammar, and punctuation. " +
+        "Make it clear, professional, and well-worded. " +
+        "Preserve the original language — do not translate. " +
+        "Preserve the user's intent exactly — do not add, remove, or change the meaning. " +
+        "No matter how short or incomplete the text looks, just polish it as-is. Never ask questions or add commentary. " +
+        "Return ONLY the polished text, nothing else.",
       text + threadHint
     );
     incrementUsage(user.id, "polish");
